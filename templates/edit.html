@@ -1,0 +1,85 @@
+{% extends "layout.html" %}
+{% import "macros.jinja" as macros %}
+
+{% block body %}
+
+<h1 class="page-header">Edit submission</h1>
+
+<div id="flashes">
+	{% for message in get_flashed_messages() %}
+	<div class="alert alert-info fade in">
+		<a href="#" class="close" data-dismiss="alert" aria-label="close">&times;</a>
+		<strong>Success!</strong> {{ message }}
+	</div>
+	{% endfor %}
+</div>
+
+<h2><a href="{{ url_for('show', subm_id=subm.id) }}">{{ subm.title }}</a> </h2>
+<br>
+
+<!-- <h4>Data file contents (first {{data|length}} rows):</h4> -->
+<div class="container-fluid">
+	<table class="table table-bordered table-striped table-condensed">
+		<thead>
+			<!-- <tr>
+				{% for i in range(data[0]|length) %}
+				<th class="text-center"># {{i+1}}</th>
+				{% endfor %}
+			</tr> -->
+			<tr>
+				{% for form in forms %}
+				<th class="text-center">
+					<div class="row">
+						<form role="form">
+							{{ form.hidden_tag() }}
+							{{ form.n }}
+							<div class="inside-table">
+								<div class="col-lg-4" id="title">
+									{{ macros.form_field(form, form.title, class="form-control") | safe }}
+								</div>
+								<div class="col-lg-4" id="role">
+									{{ macros.form_field(form, form.role, class="form-control") | safe }}
+								</div>
+								<div class="col-lg-4" id="units">
+									{{ macros.form_field(form, form.units, class="form-control") | safe }}
+								</div>
+							</div>
+						</form>
+					</div>
+				</th>
+				{% endfor %}
+			</tr>
+		</thead>
+		<tbody>
+			{% for l in data %}
+			<tr>
+				{% for v in l %}
+				<td class="text-center">{{v}}</td>
+				{% endfor %}
+			</tr>
+			{% endfor %}
+			<tr>
+				{% for v in data[0] %}
+				<td class="text-center">...</td>
+				{% endfor %}
+			</tr>
+		</tbody>
+	</table>
+</div>
+
+<hr>
+
+<div class="pull-right">
+	<button role="button" class="btn btn-primary" id="save" onclick="save_all('{{ url_for('edit', subm_id=subm.id) }}')">
+		Save all &nbsp;<span class="glyphicon glyphicon-floppy-save"></span>
+	</button>
+	<a role="button" href="{{ url_for('show', subm_id=subm.id) }}" class="btn btn-default">
+		View »
+	</a>
+</div>
+
+{% endblock %}
+
+{% block js %}
+<script src="{{ url_for('static', filename='js/edit.js') }}"></script>
+{% endblock %}

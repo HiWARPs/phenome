@@ -1,0 +1,16 @@
+.top-jumbotron{
+	color: white;
+	margin-bottom: 0;
+	background-image: url("/static/img/texturebg.png");
+	/*background-size: cover;*/
+	padding-bottom: 60px;
+}
+
+.top-box{
+	padding-top: 20px;
+	padding-bottom: 10px;
+	background-color: #eee;
+	/*background-color: #f8f8f8;*/
+	border-color: #e7e7e7;
+	margin-bottom: 20px;
+}

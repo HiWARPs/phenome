@@ -1,0 +1,40 @@
+{% macro errors(field) %}
+{% if field.errors %}
+<ul class="text-danger">
+	{% for error in field.errors %}
+	<li>{{ error }}</li>
+	{% endfor %}
+</ul>
+{% endif %}
+{% endmacro %}
+
+{% macro form_field(form, field, flat=False, placeholder=False, label_class="") %}
+<!-- <div class="form-group {% if form.errors %} {% if field.errors %} has-error {% else %} has-success {% endif %} has-feedback {% endif %}"> -->
+<div class="form-group {% if form.errors %} {% if field.errors %} has-error {% endif %} has-feedback {% endif %}">
+	{% if flat %}
+	<div class="row">
+		<div class="col-sm-2">
+			{{ field.label(class=label_class) }}
+		</div>
+		<div class="col-sm-10">
+			{{ field(**kwargs) }}
+		</div>
+	</div>
+	{% else %}
+	{% if placeholder %}
+	{{ field(placeholder=field.label.text, **kwargs) }}
+	{% else %}
+	{{ field.label(class=label_class) }}
+	{{ field(**kwargs) }}
+	{% endif %}
+	{% endif %}
+	{% if form.errors %}
+	{% if field.errors %}
+	<!-- <span class="glyphicon glyphicon-remove form-control-feedback"></span> -->
+	{% else %}
+	<!-- <span class="glyphicon glyphicon-ok form-control-feedback"></span> -->
+	{% endif %}
+	{{ errors(field) }}
+	{% endif %}
+</div>
+{% endmacro %}

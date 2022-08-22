@@ -1,0 +1,53 @@
+{% extends "layout.html" %}
+{% import "macros.jinja" as macros %}
+
+{% block css %}
+<link href="{{ url_for('static', filename='css/submit.css') }}" rel="stylesheet">
+{% endblock %}
+
+{% block body %}
+<h1 class="page-header"> New submission </h1>
+
+<form role="form" action="{{ url_for('submit') }}" method="post" enctype="multipart/form-data">
+	{{ form.hidden_tag() }}
+	{{ macros.form_field(form, form.title, class="form-control") | safe }}
+	{{ macros.form_field(form, form.description, class="form-control", rows="5", style="resize: vertical") | safe }}
+	<div class="form-group">
+		{{ form.datafile.label }}
+		<div>
+			<span class="btn btn-default btn-file">
+				<span class="glyphicon glyphicon-open-file"></span>
+				Choose...
+				{{ form.datafile() }}
+			</span>
+			&nbsp;
+			<span id="upload-file-info"></span>
+		</div>
+		{{ macros.errors(form.datafile) | safe }}
+	</div>
+	<!-- <hr> -->
+	{% if captcha in form %}
+	<div class="row">
+		<div class="pull-right col-xs-6">
+			<div class="pull-right form-group">
+				{{ form.captcha }}
+				{{ macros.errors(form.captcha) | safe }}
+			</div>
+		</div>
+	</div>
+	{% endif %}
+	<hr>
+	<div class="row">
+		<div class="pull-right col-xs-2">
+			<button type="submit" class="pull-right btn btn-primary">
+				&nbsp;&nbsp; Submit &nbsp;
+				<span class="glyphicon glyphicon-cloud-upload"></span>&nbsp;
+			</button>
+		</div>
+	</div>
+</form>
+{% endblock %}
+
+{% block js %}
+<script src="{{ url_for('static', filename='js/submit.js') }}"></script>
+{% endblock %}

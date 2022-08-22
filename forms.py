@@ -1,0 +1,198 @@
+from flask_wtf import Form, RecaptchaField
+from flask_wtf.file import FileField, FileRequired
+from wtforms import StringField, TextAreaField, IntegerField, FloatField, SelectField, BooleanField, FormField, FieldList, HiddenField
+from wtforms.widgets import HiddenInput
+from wtforms.validators import DataRequired, Optional, Length, ValidationError, NumberRange, InputRequired
+from flask import request
+from datafile import *
+# from db import *
+import os
+
+
+class MaxFileSize:
+	def __init__(self, maxsize, message=None):
+		self.maxsize = maxsize
+		if message is None:
+			message = 'File size should not exceed %d bytes!' % maxsize
+		self.message = message
+	def __call__(self, form, field):
+		if field.has_file():
+			f = request.files[field.data.name]
+			f.seek(0, os.SEEK_END)
+			size = f.tell()
+			f.seek(0)
+			if size > self.maxsize:
+				raise ValidationError(self.message)
+
+
+class ValidDataFile:
+	def __init__(self, message=None):
+		if message is None:
+			message = 'Invalid data file!'
+		self.message = message
+	def __call__(self, form, field):
+		if field.has_file():
+			f = request.files[field.data.name]
+			data = DataFile(file=f).get_data(nrows=1)
+			f.seek(0)
+			if len(data) == 0:
+				raise ValidationError(self.message)
+
+
+class SubmissionForm(Form):
+	title = StringField('Title', validators=[DataRequired(message='Please, provide a title for the submission!'), Length(max=256)])
+	description = TextAreaField('Description', validators=[Optional(), Length(max=2048)])
+	datafile = FileField('Data File', validators=[FileRequired(message='Data file is required!'), MaxFileSize(1*1024*1024), ValidDataFile()])
+	# captcha = RecaptchaField()
+
+
+class SearchForm(Form):
+	keyword = StringField('', validators=[DataRequired(), Length(max=128)])
+
+
+class DataColumnForm(Form):
+	n = IntegerField(widget=HiddenInput())
+	title = StringField('Name', validators=[DataRequired(), Length(max=128)])
+	units = StringField('Units (opt.)', validators=[Length(max=128)])
+	role = SelectField('Role', choices=[(0,'X'),(1,'Y')], coerce=int)
+
+
+class XDataColumnRequestForm(Form):
+	def __init__(self, *args, **kwargs):
+		kwargs['csrf_enabled'] = False	# hack to disable csrf protection
+		Form.__init__(self, *args, **kwargs)
+	min = FloatField('from', validators=[Optional(), NumberRange(min=-10**10, max=10**10)])
+	max = FloatField('to', validators=[Optional(), NumberRange(min=-10**10, max=10**10)])
+	checked = BooleanField('', default='y')
+
+
+class YDataColumnRequestForm(Form):
+	def __init__(self, *args, **kwargs):
+		kwargs['csrf_enabled'] = False	# hack to disable csrf protection
+		Form.__init__(self, *args, **kwargs)
+	dummy = HiddenField()	# workaround for only 1 boolean field (see https://github.com/flask-admin/flask-admin/issues/681)
+	checked = BooleanField('', default='y')
+
+
+class FlatForm:
+	def __init__(self, form):
+		self.form = form
+	def __getattr__(self, name):
+		fattr = getattr(self.form, name)
+		if fattr.__class__.__name__ == 'FieldList':
+			return [FlatForm(i) for i in fattr]
+		if hasattr(fattr, 'data'):
+			return getattr(fattr, 'data')
+		return fattr
+
+
+# class FlatForm:
+# 	def __init__(self, form=None):
+# 		if form:
+# 			self.populate(form)
+	# def populate(self, form):
+	# 	for attr in dir(form):
+	# 		if attr[0] != '_':
+	# 			fa = getattr(form, attr)
+	# 			if fa.__class__.__name__ == 'FieldList':
+	# 				setattr(self, attr, [])
+	# 				for item in fa:
+	# 					getattr(self, attr).append(item)
+	# 				print 'HEY-HO!'
+	# 			elif hasattr(fa, 'data'):
+	# 				data = fa.data
+	# 				setattr(self, attr, data)
+	# 			else:
+	# 				setattr(self, attr, fa)
+
+
+def flat(form):
+	return FlatForm(form)
+
+
+def append_attrs(form, dict):
+	for key in dict:
+		setattr(form, key, dict[key])	# HTML
+		# getattr(form, key).data = dict[key]	# data
+
+
+class DataRequestForm(Form):
+	def __init__(self, *args, **kwargs):
+		kwargs['csrf_enabled'] = False	# hack to disable csrf protection
+		columns = kwargs.get('columns')
+		if columns:
+			del kwargs['columns']
+		Form.__init__(self, *args, **kwargs)
+		if columns:
+			xcols = [c for c in columns if c['role']==0]
+			ycols = [c for c in columns if c['role']==1]
+			if request.args or request.form:
+				for z in zip(xcols, self.xcols), zip(ycols, self.ycols):
+					for c, s in z:
+						append_attrs(s, dict(c))
+			else:	# create new empty form
+				for cols, scols in (xcols, self.xcols), (ycols, self.ycols):
+					for col in cols:
+						scols.append_entry()
+						append_attrs(scols[-1], dict(col))
+	xcols = FieldList(FormField(XDataColumnRequestForm), max_entries=64)
+	ycols = FieldList(FormField(YDataColumnRequestForm), max_entries=64)
+
+
+# class FormFactory:
+# 	@staticmethod
+# 	def create():
+# 		class DynamicForm(Form):
+# 			_subforms = []
+# 			def __init__(self, *args, **kwargs):
+# 				Form.__init__(self, *args, **kwargs)
+# 				for subform in self._subforms:
+# 					subform._form = self
+# 			_attr_count = 0
+# 			@classmethod
+# 			def add_attr(self, attr, name=None):
+# 				if name is None:
+# 					name = '_attr_%d' % self._attr_count
+# 					self._attr_count += 1
+# 				setattr(self, name, attr)
+# 				return name
+# 		return DynamicForm
+
+
+# class SubForm(object):
+# 	def __init__(self, cls, **kwargs):
+# 		object.__setattr__(self, '_cls', cls)
+# 		cls._subforms.append(self)
+# 		for key in kwargs:
+# 			setattr(self, key, kwargs[key])
+# 	_attr_dict = {}
+# 	def __setattr__(self, name, val):
+# 		if name == '_form':
+# 			object.__setattr__(self, '_form', val)
+# 		else:
+# 			self._attr_dict[name] = self._cls.add_attr(val)
+# 	def __getattr__(self, name):
+# 		if hasattr(self, '_form'):
+# 			form = self._form
+# 		else:
+# 			form = self._cls
+# 		return getattr(form, self._attr_dict[name])
+
+
+# class DataRequestFormFactory(FormFactory):
+# 	@staticmethod
+# 	def create(subm_id):
+# 		F = FormFactory.create()
+# 		F.xcols, F.ycols = [], []
+# 		columns = sorted(query_db('select * from datacolumns where subm_id=?', subm_id), key=lambda c: c['n'])
+# 		for c in [dict(c) for c in columns if c['role'] == 0]:	# x-values
+# 			s = SubForm(F, **c)
+# 			s.min = FloatField('from', validators=[Length(max=32)])
+# 			s.max = FloatField('to', validators=[Length(max=32)])
+# 			s.ignore = BooleanField('ignore')
+# 			F.xcols.append(s)
+# 		for c in [dict(c) for c in columns if c['role'] == 1]:	# y-values
+# 			s = SubForm(F, **c)
+# 			s.ignore = BooleanField('ignore')
+# 			F.ycols.append(s)
+# 		return F

@@ -1,0 +1,9 @@
+TODO:
+
+* manage database query failure due to timeout / add retries
+* add limits for submission text sizes (DONE)
+* handle > MAX_CONTENT_LENGTH case (DONE)
+* test for secure filename
+* add limits for submission frequency
+* add moderation of submissions
+etc.
